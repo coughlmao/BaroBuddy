@@ -1,7 +1,10 @@
+import itertools
+
 from barobuddy.models import Assessment, Reading
 
 MIN_PRESSURE_CHANGE_HPA = 1.5
 MIN_ELEVATION_CHANGE_M = 30.0
+MIN_ABRUPT_PRESSURE_STEP_HPA = 2.0
 
 
 def assess_readings(readings: list[Reading]) -> Assessment:
@@ -82,6 +85,44 @@ def assess_readings(readings: list[Reading]) -> Assessment:
             uncertainty=(
                 "The readings do not establish the cause of the pressure "
                 "change or indicate future weather."
+            ),
+            pressure_change_hpa=pressure_change,
+            elevation_change_m=elevation_change,
+            data_quality=quality,
+        )
+
+    valid_ids = {id(reading) for reading in valid}
+    adjacent_pressure_steps = [
+        current.pressure_hpa - previous.pressure_hpa
+        for previous, current in itertools.pairwise(ordered)
+        if id(previous) in valid_ids and id(current) in valid_ids
+    ]
+
+    # Detect a large single-step pressure change at broadly stable elevation.
+    largest_pressure_step = (
+        max(adjacent_pressure_steps, key=abs) if adjacent_pressure_steps else None
+    )
+
+    if (
+        abs(elevation_change) < MIN_ELEVATION_CHANGE_M
+        and largest_pressure_step is not None
+        and abs(largest_pressure_step) >= MIN_ABRUPT_PRESSURE_STEP_HPA
+    ):
+        return Assessment(
+            event="abrupt_pressure_change",
+            summary=(
+                "A large pressure change occurred between consecutive "
+                "readings while elevation remained broadly stable."
+            ),
+            evidence=(
+                *evidence,
+                f"Largest adjacent pressure change was "
+                f"{largest_pressure_step:+.2f} hPa.",
+            ),
+            uncertainty=(
+                "An abrupt change may reflect atmospheric variation, "
+                "sensor noise, or other local effects. Its cause cannot "
+                "be determined from these readings alone."
             ),
             pressure_change_hpa=pressure_change,
             elevation_change_m=elevation_change,

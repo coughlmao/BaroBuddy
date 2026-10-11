@@ -14,6 +14,7 @@ EventType = Literal[
     "conflicting_signals",
     "no_significant_change",
     "insufficient_data",
+    "abrupt_pressure_change",
 ]
 
 

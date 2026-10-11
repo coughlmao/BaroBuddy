@@ -49,3 +49,56 @@ def test_insufficient_data_does_not_make_a_claim():
     assert result.event == "insufficient_data"
     assert result.pressure_change_hpa is None
     assert result.elevation_change_m is None
+
+
+def test_abrupt_pressure_drop_and_recovery_is_detected():
+    start = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
+
+    readings = [
+        Reading(start, 1013.0, 100.0),
+        Reading(start + timedelta(minutes=5), 1010.0, 101.0),
+        Reading(start + timedelta(minutes=10), 1012.8, 100.5),
+    ]
+
+    result = assess_readings(readings)
+
+    assert result.event == "abrupt_pressure_change"
+    assert result.pressure_change_hpa == -0.2
+    assert any(
+        "Largest adjacent pressure change was -3.00 hPa." in item
+        for item in result.evidence
+    )
+    assert "cause cannot" in result.uncertainty
+
+
+def test_out_of_order_readings_are_sorted_before_assessment():
+    start = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
+
+    readings = [
+        Reading(start + timedelta(minutes=10), 1010.0, 100.0),
+        Reading(start, 1013.0, 100.0),
+        Reading(start + timedelta(minutes=5), 1011.5, 100.0),
+    ]
+
+    result = assess_readings(readings)
+
+    assert result.event == "falling_pressure_trend"
+    assert result.pressure_change_hpa == -3.0
+
+
+def test_invalid_pressure_and_elevation_readings_are_ignored():
+    start = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
+
+    readings = [
+        Reading(start, 1013.0, 100.0),
+        Reading(start + timedelta(minutes=5), 1200.0, 105.0),
+        Reading(start + timedelta(minutes=10), 1011.0, 110.0),
+        Reading(start + timedelta(minutes=15), 1010.0, 9500.0),
+    ]
+
+    result = assess_readings(readings)
+
+    assert result.event == "falling_pressure_trend"
+    assert result.pressure_change_hpa == -2.0
+    assert result.elevation_change_m == 10.0
+    assert "2 invalid or incomplete reading(s) ignored." == result.data_quality
