@@ -82,20 +82,88 @@ with elevation_col:
 st.divider()
 
 # Detector assessment
+# Detector assessment — show the main finding first.
 st.subheader("Field assessment")
 
-st.write("**Detected event:**", assessment.event.replace("_", " ").title())
+st.markdown("### " + assessment.event.replace("_", " ").title())
 st.write(assessment.summary)
 
-st.markdown("**Evidence**")
-for item in assessment.evidence:
-    st.markdown(f"- {item}")
+if assessment.event == "insufficient_data":
+    st.warning("There is not enough reliable data for a useful assessment.")
+elif assessment.event == "conflicting_signals":
+    st.warning("The observed signals conflict; interpret this result cautiously.")
+elif assessment.event == "abrupt_pressure_change":
+    st.warning("A rapid pressure change was detected; its cause is unknown.")
+elif assessment.event == "falling_pressure_trend":
+    st.info("Pressure fell while elevation remained relatively stable.")
+elif assessment.event == "elevation_associated_pressure_change":
+    st.info("Pressure changed alongside elevation.")
+else:
+    st.success("No significant change was detected by the current rules.")
+
+evidence_col, quality_col = st.columns(2)
+
+with evidence_col:
+    st.markdown("**Evidence**")
+    for item in assessment.evidence:
+        st.markdown(f"- {item}")
+
+with quality_col:
+    st.markdown("**Data quality**")
+    st.write(assessment.data_quality)
 
 st.markdown("**Uncertainty**")
 st.warning(assessment.uncertainty)
 
-st.markdown("**Data quality**")
-st.write(assessment.data_quality)
+st.divider()
+
+# Environmental readings
+st.subheader("Measurements over time")
+
+chart_data = pd.DataFrame(
+    [
+        {
+            "timestamp": reading.timestamp,
+            "pressure_hpa": reading.pressure_hpa,
+            "elevation_m": reading.elevation_m,
+        }
+        for reading in scenario.readings
+    ]
+)
+
+pressure_col, elevation_col = st.columns(2)
+
+with pressure_col:
+    st.subheader("Atmospheric pressure")
+    st.line_chart(
+        chart_data,
+        x="timestamp",
+        y="pressure_hpa",
+        x_label="Time",
+        y_label="Pressure (hPa)",
+    )
+
+    if assessment.pressure_change_hpa is not None:
+        st.metric(
+            "Change over the displayed window",
+            f"{assessment.pressure_change_hpa:+.2f} hPa",
+        )
+
+with elevation_col:
+    st.subheader("Elevation")
+    st.line_chart(
+        chart_data,
+        x="timestamp",
+        y="elevation_m",
+        x_label="Time",
+        y_label="Elevation (m)",
+    )
+
+    if assessment.elevation_change_m is not None:
+        st.metric(
+            "Change over the displayed window",
+            f"{assessment.elevation_change_m:+.2f} m",
+        )
 
 with st.expander("Inspect simulated readings"):
     st.dataframe(chart_data, use_container_width=True)
@@ -107,7 +175,7 @@ st.divider()
 
 # Local AI explanation with a deterministic fallback.
 st.subheader("Local AI assistant")
-st.caption("Model: `Gemma` from Google")
+st.caption("Model: `gemma4:e2b` from Google")
 
 if st.button("Generate explanation with Gemma"):
     with st.spinner("Generating a local explanation..."):
