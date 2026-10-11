@@ -16,7 +16,7 @@ def generate_scenario(
 
     if interval_minutes <= 0:
         raise ValueError("interval_minutes must be positive")
-    
+
     if name not in (
         "uphill_climb",
         "falling_pressure",
@@ -31,8 +31,8 @@ def generate_scenario(
 
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start must be timezone-aware")
-    
-    definition=get_scenario(name)
+
+    definition = get_scenario(name)
     readings: list[Reading] = []
 
     for index in range(count):
@@ -54,7 +54,7 @@ def generate_scenario(
             # but pressure rises too, with short oscillations.
             elevation = 100.0 + index * 8.0 + (5.0 if index % 2 else 0.0)
             pressure = 1013.2 + index * 0.15 + (0.8 if index % 2 else -0.5)
-            
+
         elif definition.pattern == "steady":
             # Small deterministic fluctuations around a stable baseline.
             variations = (0.0, 0.1, -0.1, 0.2, -0.1)
@@ -78,7 +78,7 @@ def generate_scenario(
             pressure = 1013.2 if index < 6 else 1010.2
 
         else:
-             # Defensive guard if a pattern is added without implementation.
+            # Defensive guard if a pattern is added without implementation.
             raise ValueError(f"Unsupported scenario pattern: {definition.pattern}")
 
         readings.append(
@@ -88,8 +88,7 @@ def generate_scenario(
                 elevation_m=round(elevation, 2),
             )
         )
-        
-        
+
     return Scenario(
         name=name,
         description=definition.description,

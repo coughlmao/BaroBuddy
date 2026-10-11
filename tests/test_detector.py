@@ -69,8 +69,7 @@ def test_abrupt_pressure_drop_and_recovery_is_detected():
         for item in result.evidence
     )
     assert any(
-        "Largest observed pressure-change rate was 0.600 hPa/min."
-        in item
+        "Largest observed pressure-change rate was 0.600 hPa/min." in item
         for item in result.evidence
     )
     assert "cause cannot" in result.uncertainty
@@ -89,8 +88,8 @@ def test_out_of_order_readings_are_sorted_before_assessment():
 
     assert result.event == "falling_pressure_trend"
     assert result.pressure_change_hpa == -3.0
-    
-    
+
+
 def test_pressure_change_over_longer_interval_is_not_called_abrupt():
     start = datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
 
@@ -103,7 +102,6 @@ def test_pressure_change_over_longer_interval_is_not_called_abrupt():
 
     assert result.event == "falling_pressure_trend"
     assert result.pressure_change_hpa == -2.5
-
 
 
 def test_mixed_timezone_aware_and_naive_timestamps_return_insufficient_data():
@@ -121,11 +119,7 @@ def test_mixed_timezone_aware_and_naive_timestamps_return_insufficient_data():
     result = assess_readings(readings)
 
     assert result.event == "insufficient_data"
-    assert any(
-        "timezone" in item.lower()
-        for item in result.evidence
-    )
-
+    assert any("timezone" in item.lower() for item in result.evidence)
 
 
 def test_invalid_pressure_and_elevation_readings_are_ignored():

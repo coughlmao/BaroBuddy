@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 
 from barobuddy.models import ScenarioName
@@ -16,33 +15,25 @@ SCENARIOS: tuple[ScenarioDefinition, ...] = (
     ScenarioDefinition(
         name="uphill_climb",
         label="Uphill climb",
-        description=(
-            "Simulated elevation gain accompanied by falling pressure."
-        ),
+        description=("Simulated elevation gain accompanied by falling pressure."),
         pattern="uphill",
     ),
     ScenarioDefinition(
         name="falling_pressure",
         label="Falling pressure",
-        description=(
-            "Simulated falling pressure while elevation remains stable."
-        ),
+        description=("Simulated falling pressure while elevation remains stable."),
         pattern="falling",
     ),
     ScenarioDefinition(
         name="conflicting_signals",
         label="Conflicting signals",
-        description=(
-            "Simulated inconsistent pressure and elevation signals."
-        ),
+        description=("Simulated inconsistent pressure and elevation signals."),
         pattern="conflicting",
     ),
     ScenarioDefinition(
         name="steady_conditions",
         label="Steady conditions",
-        description=(
-            "Simulated small pressure variations at stable elevation."
-        ),
+        description=("Simulated small pressure variations at stable elevation."),
         pattern="steady",
     ),
     ScenarioDefinition(
@@ -56,9 +47,7 @@ SCENARIOS: tuple[ScenarioDefinition, ...] = (
     ScenarioDefinition(
         name="abrupt_pressure_change",
         label="Abrupt pressure change",
-        description=(
-            "Simulated rapid pressure change at stable elevation."
-        ),
+        description=("Simulated rapid pressure change at stable elevation."),
         pattern="abrupt",
     ),
 )
