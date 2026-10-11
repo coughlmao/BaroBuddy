@@ -6,15 +6,18 @@ ScenarioName = Literal[
     "uphill_climb",
     "falling_pressure",
     "conflicting_signals",
+    "steady_conditions",
+    "pressure_recovery",
+    "abrupt_pressure_change",
 ]
 
 EventType = Literal[
     "elevation_associated_pressure_change",
     "falling_pressure_trend",
+    "abrupt_pressure_change",
     "conflicting_signals",
     "no_significant_change",
     "insufficient_data",
-    "abrupt_pressure_change",
 ]
 
 

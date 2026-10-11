@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 from barobuddy.ai_assistant import explain_assessment
+from barobuddy.data.scenarios import SCENARIOS
 from barobuddy.detector import assess_readings
 from barobuddy.simulator import generate_scenario
 
@@ -19,23 +20,17 @@ st.info(
     "This prototype does not provide weather forecasts or safety warnings."
 )
 
-# Scenario selection
-scenario_options = {
-    "Uphill climb": "uphill_climb",
-    "Falling pressure": "falling_pressure",
-    "Conflicting signals": "conflicting_signals",
-}
-
-selected_label = st.selectbox(
+selected_scenario = st.selectbox(
     "Choose a simulated scenario",
-    options=list(scenario_options.keys()),
+    options=SCENARIOS,
+    format_func=lambda scenario: scenario.label,
 )
 
-scenario = generate_scenario(scenario_options[selected_label])
+scenario = generate_scenario(selected_scenario.name)
 assessment = assess_readings(list(scenario.readings))
 
-st.subheader(selected_label)
-st.write(scenario.description)
+st.subheader(selected_scenario.label)
+st.write(selected_scenario.description)
 
 # Convert the simulated readings into chart-friendly data.
 chart_data = pd.DataFrame(
@@ -110,20 +105,20 @@ with st.expander("Inspect simulated readings"):
 
 st.divider()
 
-# AI integration will be added in a later milestone.
+# Local AI explanation with a deterministic fallback.
 st.subheader("Local AI assistant")
-st.caption("Model: `gemma4:e2b` via Ollama")
+st.caption("Model: `Gemma` from Google")
 
 if st.button("Generate explanation with Gemma"):
     with st.spinner("Generating a local explanation..."):
         explanation = explain_assessment(assessment)
 
     st.session_state["ai_explanation"] = explanation
-    st.session_state["ai_scenario"] = selected_label
+    st.session_state["ai_scenario"] = selected_scenario
 
 if (
     "ai_explanation" in st.session_state
-    and st.session_state.get("ai_scenario") == selected_label
+    and st.session_state.get("ai_scenario") == selected_scenario
 ):
     explanation = st.session_state["ai_explanation"]
 
