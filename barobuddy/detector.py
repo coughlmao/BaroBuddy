@@ -4,7 +4,7 @@ from barobuddy.models import Assessment, Reading
 
 MIN_PRESSURE_CHANGE_HPA = 1.5
 MIN_ELEVATION_CHANGE_M = 30.0
-MIN_ABRUPT_PRESSURE_STEP_HPA = 2.0
+MIN_ABRUPT_PRESSURE_RATE_HPA_PER_MIN = 0.4
 
 
 def assess_readings(readings: list[Reading]) -> Assessment:
@@ -12,13 +12,24 @@ def assess_readings(readings: list[Reading]) -> Assessment:
     if len(readings) < 2:
         return _insufficient("At least two readings are required.")
 
-    ordered = sorted(readings, key=lambda reading: reading.timestamp)
 
+    # Validate timestamps before sorting: aware and naive datetimes
+    # cannot safely be compared with each other.
+    
     if any(
-        reading.timestamp.tzinfo is None or reading.timestamp.utcoffset() is None
-        for reading in ordered
+        reading.timestamp.tzinfo is None 
+        or reading.timestamp.utcoffset() is None
+        for reading in readings
     ):
         return _insufficient("Timestamps must include a timezone.")
+
+    ordered = sorted(readings, key=lambda reading: reading.timestamp)
+    
+    timestamps = [reading.timestamp for reading in ordered]
+    if len(timestamps) != len(set(timestamps)):
+        return _insufficient(
+            "Duplicate timestamp detected; readings cannot be ordered unambiguously."
+        )
 
     valid = [
         reading
@@ -92,22 +103,43 @@ def assess_readings(readings: list[Reading]) -> Assessment:
         )
 
     valid_ids = {id(reading) for reading in valid}
-    adjacent_pressure_steps = [
-        current.pressure_hpa - previous.pressure_hpa
+    pressure_steps = [
+        (
+            current.pressure_hpa - previous.pressure_hpa,
+            (current.timestamp - previous.timestamp).total_seconds() / 60.0
+        )
         for previous, current in itertools.pairwise(ordered)
         if id(previous) in valid_ids and id(current) in valid_ids
     ]
 
+    # Ignore pairs with no positive elapsed time defensively.
+    pressure_steps = [
+        (change, minutes)
+        for change, minutes in pressure_steps
+        if minutes > 0
+    ]
+    
     # Detect a large single-step pressure change at broadly stable elevation.
     largest_pressure_step = (
-        max(adjacent_pressure_steps, key=abs) if adjacent_pressure_steps else None
+        max(pressure_steps, key=lambda item: abs(item[0])) 
+        if pressure_steps 
+        else None
     )
 
+    largest_pressure_rate = (
+        max(
+            (abs(change) / minutes for change, minutes in pressure_steps),
+            default=0.0,
+        )
+    )
+      
     if (
         abs(elevation_change) < MIN_ELEVATION_CHANGE_M
         and largest_pressure_step is not None
-        and abs(largest_pressure_step) >= MIN_ABRUPT_PRESSURE_STEP_HPA
+        and abs(largest_pressure_rate) >= MIN_ABRUPT_PRESSURE_RATE_HPA_PER_MIN
     ):
+        change, minutes = largest_pressure_step
+        
         return Assessment(
             event="abrupt_pressure_change",
             summary=(
@@ -116,8 +148,8 @@ def assess_readings(readings: list[Reading]) -> Assessment:
             ),
             evidence=(
                 *evidence,
-                f"Largest adjacent pressure change was "
-                f"{largest_pressure_step:+.2f} hPa.",
+                f"Largest adjacent pressure change was {change:+.2f} hPa over {minutes:.1f} minute(s).",
+                f"Largest observed pressure-change rate was {largest_pressure_rate:.3f} hPa/min.",
             ),
             uncertainty=(
                 "An abrupt change may reflect atmospheric variation, "
