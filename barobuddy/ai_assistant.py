@@ -3,11 +3,15 @@ import os
 from dataclasses import dataclass
 from urllib.request import Request, urlopen
 
+from dotenv import load_dotenv
+
 from barobuddy.models import Assessment
 
-OPEN_WEIGHT_MODEL = "gemma4:e2b"
-DEFAULT_BASE_URL = "http://localhost:11434"
-DEFAULT_TIMEOUT_SECONDS = 120
+load_dotenv()
+
+OPEN_WEIGHT_MODEL = os.getenv("OPEN_WEIGHT_MODEL", "gemma4:e2b")
+DEFAULT_BASE_URL = os.getenv("DEFAULT_BASE_URL", "http://localhost:11434")
+DEFAULT_TIMEOUT_SECONDS = int(os.getenv("DEFAULT_TIMEOUT_SECONDS", "120"))
 
 
 @dataclass(frozen=True)
@@ -37,9 +41,7 @@ def explain_assessment(
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> AIExplanation:
     """Explain a detector assessment using local Ollama, with safe fallback."""
-    base_url = (
-        base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)
-    ).rstrip("/")
+    base_url = (base_url or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)).rstrip("/")
 
     prompt_data = {
         "detected_event": assessment.event,
@@ -76,8 +78,7 @@ Assessment:
             {
                 "role": "system",
                 "content": (
-                    "Follow the user's data and constraints. "
-                    "Return valid JSON only."
+                    "Follow the user's data and constraints. " "Return valid JSON only."
                 ),
             },
             {"role": "user", "content": prompt},
@@ -120,6 +121,9 @@ Assessment:
             used_fallback=False,
         )
 
-    except (OSError, TimeoutError, ValueError, KeyError, TypeError):
-        return _fallback(assessment)
+    # except (OSError, TimeoutError, ValueError, KeyError, TypeError):
+    #     return _fallback(assessment)
 
+    except (OSError, TimeoutError, ValueError, KeyError, TypeError) as exc:
+        print(f"[BaroBuddy AI debug] {type(exc).__name__}: {exc}")
+        return _fallback(assessment)
