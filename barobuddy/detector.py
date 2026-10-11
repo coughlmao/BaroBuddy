@@ -12,8 +12,7 @@ def assess_readings(readings: list[Reading]) -> Assessment:
     ordered = sorted(readings, key=lambda reading: reading.timestamp)
 
     if any(
-        reading.timestamp.tzinfo is None
-        or reading.timestamp.utcoffset() is None
+        reading.timestamp.tzinfo is None or reading.timestamp.utcoffset() is None
         for reading in ordered
     ):
         return _insufficient("Timestamps must include a timezone.")
@@ -35,12 +34,8 @@ def assess_readings(readings: list[Reading]) -> Assessment:
     first = valid[0]
     last = valid[-1]
 
-    pressure_change = round(
-        last.pressure_hpa - first.pressure_hpa, 2
-    )
-    elevation_change = round(
-        last.elevation_m - first.elevation_m, 2
-    )
+    pressure_change = round(last.pressure_hpa - first.pressure_hpa, 2)
+    elevation_change = round(last.elevation_m - first.elevation_m, 2)
 
     missing_count = len(readings) - len(valid)
     quality = (
@@ -96,9 +91,7 @@ def assess_readings(readings: list[Reading]) -> Assessment:
     if abs(elevation_change) < MIN_ELEVATION_CHANGE_M and pressure_falling:
         return Assessment(
             event="falling_pressure_trend",
-            summary=(
-                "Pressure decreased while elevation remained broadly stable."
-            ),
+            summary=("Pressure decreased while elevation remained broadly stable."),
             evidence=evidence,
             uncertainty=(
                 "A falling pressure trend does not by itself confirm a storm "
@@ -109,9 +102,8 @@ def assess_readings(readings: list[Reading]) -> Assessment:
             data_quality=quality,
         )
 
-    if (
-        (pressure_rising and elevation_rising)
-        or (pressure_falling and elevation_falling)
+    if (pressure_rising and elevation_rising) or (
+        pressure_falling and elevation_falling
     ):
         return Assessment(
             event="conflicting_signals",

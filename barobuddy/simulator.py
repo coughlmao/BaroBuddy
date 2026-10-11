@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from barobuddy.models import Reading, Scenario, ScenarioName
 
@@ -16,7 +16,7 @@ def generate_scenario(
     if interval_minutes <= 0:
         raise ValueError("interval_minutes must be positive")
 
-    start = start or datetime(2026, 10, 10, 12, 0, tzinfo=datetime.UTC)
+    start = start or datetime(2026, 10, 10, 12, 0, tzinfo=UTC)
 
     if start.tzinfo is None or start.utcoffset() is None:
         raise ValueError("start must be timezone-aware")
@@ -41,11 +41,7 @@ def generate_scenario(
             # Deliberately inconsistent readings: elevation rises overall,
             # but pressure rises too, with short oscillations.
             elevation = 100.0 + index * 8.0 + (5.0 if index % 2 else 0.0)
-            pressure = (
-                1013.2
-                + index * 0.15
-                + (0.8 if index % 2 else -0.5)
-            )
+            pressure = 1013.2 + index * 0.15 + (0.8 if index % 2 else -0.5)
 
         else:
             raise ValueError(f"Unknown scenario: {name}")
@@ -62,9 +58,7 @@ def generate_scenario(
         "uphill_climb": (
             "Simulated uphill climb: elevation rises while pressure falls."
         ),
-        "falling_pressure": (
-            "Simulated falling-pressure trend with stable elevation."
-        ),
+        "falling_pressure": ("Simulated falling-pressure trend with stable elevation."),
         "conflicting_signals": (
             "Simulated inconsistent pressure and elevation signals."
         ),
