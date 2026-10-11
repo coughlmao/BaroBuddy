@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 
+from barobuddy.ai_assistant import explain_assessment
 from barobuddy.detector import assess_readings
 from barobuddy.simulator import generate_scenario
 
@@ -111,13 +112,40 @@ st.divider()
 
 # AI integration will be added in a later milestone.
 st.subheader("Local AI assistant")
-st.write("Selected model: `gemma4:e2b`")
-st.caption(
-    "Next milestone: use the local model to explain the detector's "
-    "evidence and uncertainty without changing its classification."
-)
+st.caption("Model: `gemma4:e2b` via Ollama")
 
-st.caption(
-    "Prototype only — not a weather forecasting, navigation, "
-    "or medical safety system."
-)
+if st.button("Generate explanation with Gemma"):
+    with st.spinner("Generating a local explanation..."):
+        explanation = explain_assessment(assessment)
+
+    st.session_state["ai_explanation"] = explanation
+    st.session_state["ai_scenario"] = selected_label
+
+if (
+    "ai_explanation" in st.session_state
+    and st.session_state.get("ai_scenario") == selected_label
+):
+    explanation = st.session_state["ai_explanation"]
+
+    if explanation.used_fallback:
+        st.info(
+            "Local AI is unavailable or returned an unusable response. "
+            "Showing the deterministic fallback instead."
+        )
+    else:
+        st.success("Explanation generated locally.")
+
+    st.markdown("**What this means**")
+    st.write(explanation.explanation)
+
+    st.markdown("**Suggested next step**")
+    st.write(explanation.next_step)
+
+    # Keep the detector's uncertainty visible regardless of AI output.
+    st.markdown("**Detector's uncertainty**")
+    st.warning(assessment.uncertainty)
+else:
+    st.write(
+        "The detector is ready. Select this button when you want "
+        "Gemma to explain the current assessment."
+    )
